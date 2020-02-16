@@ -1,0 +1,23 @@
+{
+  "name": "git-short-url",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "James Ward <james@notjam.es>",
+  "license": "MIT",
+  "dependencies": {
+    "base-58": "0.0.1",
+    "commander": "^4.1.1",
+    "configstore": "^5.0.1",
+    "gray-matter": "^4.0.2",
+    "handlebars": "^4.7.3",
+    "nodegit": "^0.26.4",
+    "yaml": "^1.7.2"
+  },
+  "bin": {
+    "short": "./cli.js"
+  }
+}

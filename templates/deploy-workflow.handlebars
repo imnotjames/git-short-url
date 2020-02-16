@@ -1,0 +1,23 @@
+name: Publish Short URLs
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '13.x'
+      - run: npm install -g git-short-url
+      - run: short publish --from {{{{raw}}}}"${GITHUB_SHA}"{{{{/raw}}}} --output-dir ./public/
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          deploy_key: {{{{raw}}}}${{ secrets.ACTIONS_DEPLOY_KEY }}{{{{/raw}}}}
+          publish_dir: ./public
