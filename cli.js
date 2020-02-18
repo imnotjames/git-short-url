@@ -97,4 +97,9 @@ program
         console.log(commit);
     });
 
-program.parseAsync(process.argv);
+
+if (!process.argv.slice(2).length) {
+  program.outputHelp();
+} else {
+  program.parseAsync(process.argv);
+}
