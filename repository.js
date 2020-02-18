@@ -114,7 +114,7 @@ class Repository {
   async get(id) {
     const repo = await NodeRepository.open(path.join(this.path, '.git'));
 
-    let shortCommitId = base58.decode(id).toString('hex');
+    let shortCommitId = Buffer.from(base58.decode(id)).toString('hex');
 
     let commit = await getCommitFromShortCommitId(shortCommitId);
 
