@@ -76,7 +76,7 @@ async function getShortId(repo, commit, { hashLength = MINIMUM_HASH} = {}) {
       return base58.encode(shortIdBuffer);
     }
 
-    hashLength++;
+    hashLength += 2;
   }
 }
 
