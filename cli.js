@@ -74,11 +74,16 @@ program
     .action(async ({outputDir, from, until}) => {
         const repository = repositoryFromConfig();
 
-        const publisher = new Publisher(outputDir)
+        const publisher = new Publisher(outputDir);
+
+        let count = 0;
 
         for await (let commit of repository.all({ from, until })) {
           publisher.publish(commit);
+          count++;
         }
+
+        console.log(`Published ${count} urls`);
     });
 
 program
