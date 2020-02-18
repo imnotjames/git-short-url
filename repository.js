@@ -106,17 +106,30 @@ async function formatRedirectCommit(repo, commit) {
 }
 
 class Repository {
+  async _getRepository() {
+    if (!this._repo) {
+      const repoPath = await NodeRepository.discover(path.resolve(this.path), 0, null);
+      this._repo = await NodeRepository.open(repoPath);
+    }
+
+    return this._repo;
+  }
+
   constructor(repoPath, { branch = 'master', upstream = 'origin' }) {
     this.path = repoPath;
     this.branch = branch;
   }
 
   async get(id) {
-    const repo = await NodeRepository.open(path.join(this.path, '.git'));
+    if (!id) {
+      throw new Error('Commit Not Found');
+    }
+
+    const repo = await this._getRepository();
 
     let shortCommitId = Buffer.from(base58.decode(id)).toString('hex');
 
-    let commit = await getCommitFromShortCommitId(shortCommitId);
+    let commit = await getCommitFromShortCommitId(repo, shortCommitId);
 
     if (!commit) {
       throw new Error('Commit Not Found');
@@ -126,7 +139,7 @@ class Repository {
   }
 
   async* all({ from, until } = {}) {
-    const repo = await NodeRepository.open(path.resolve(path.join(this.path, '.git')));
+    const repo = await this._getRepository();
 
     let walker = repo.createRevWalk();
 
@@ -174,7 +187,8 @@ class Repository {
       throw new Error('A Valid URL is required.');
     }
 
-    const repo = await NodeRepository.open(path.join(this.path, '.git'));
+    const repo = await this._getRepository();
+
     await repo.checkoutBranch(this.branch);
     const index = await repo.refreshIndex();
 
