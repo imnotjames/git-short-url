@@ -55,6 +55,17 @@ program
     });
 
 program
+    .command('info <short-id>')
+    .description('')
+    .action(async (shortId) => {
+      const repository = repositoryFromConfig();
+
+      let shortUrl = await repository.get(shortId);
+
+      console.log(shortUrl);
+    });
+
+program
     .command('publish')
     .description('')
     .option('--output-dir', 'Where to store the indexed items', '.')
