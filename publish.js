@@ -57,11 +57,11 @@ class Publisher {
 
     let redirectPath = path.join(this.directory, commit.shortId, 'index.html');
 
-    console.log(redirectPath);
-
     await mkdirp(path.dirname(redirectPath));
 
     await writeFile(redirectPath, template(commit));
+
+    return redirectPath;
   }
 }
 
