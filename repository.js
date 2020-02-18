@@ -54,7 +54,7 @@ async function getCommitFromShortCommitId(repo, shortId) {
   try {
     return await Commit.lookupPrefix(repo, Oid.fromString(shortId), shortId.length);
   } catch (e) {
-    if (e.errno !== NodeGitError.EAMBIGUOUS) {
+    if (e.errno !== NodeGitError.CODE.EAMBIGUOUS) {
       throw e;
     }
 
