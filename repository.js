@@ -2,7 +2,7 @@ const child_process = require('child_process');
 const util = require('util');
 
 const matter = require('gray-matter');
-const { Commit, Oid, Repository: NodeRepository, Reference, Revwalk, Signature, Error: NodeGitError } = require('nodegit');
+const { Commit, Oid, Diff: NodeGitDiff, Tree: NodeGitTree, Repository: NodeRepository, Reference, Revwalk, Signature, Error: NodeGitError } = require('nodegit');
 const path = require('path');
 const { URL, parse } = require('url');
 const YAML = require('yaml');
@@ -19,6 +19,22 @@ const VALID_PROTOCOLS = [
     'https',
     'ftp',
 ];
+
+async function hasStagedChanges(repo, index) {
+  let head = await repo.getHeadCommit();
+
+  if (!head) {
+    return false;
+  }
+
+  let headTree = await head.getTree();
+
+  const diff = await NodeGitDiff.treeToIndex(repo, headTree, index);
+
+  const patches = await diff.patches();
+
+  return patches.length > 0;
+}
 
 function isValidURL(url) {
   try {
@@ -190,7 +206,6 @@ class Repository {
     const repo = await this._getRepository();
 
     await repo.checkoutBranch(this.branch);
-    const index = await repo.refreshIndex();
 
     let metadata = {
       url,
@@ -203,18 +218,24 @@ class Repository {
     const message = `---\n${YAML.stringify(metadata)}---\n${description}`;
 
     // Clear the index - don't accidentally write anything we don't mean to..
-    await index.removeAll();
-    await index.write();
+    const index = await repo.refreshIndex();
 
-    let oid = await index.writeTree();
-    let headId = await Reference.nameToId(repo, "HEAD");
+    if (index.hasConflicts()) {
+      throw new Error("Datatabase Repository has Conflicts, cannot proceed.")
+    }
 
-    let parent = await repo.getCommit(headId);
+    if (await hasStagedChanges(repo, index)) {
+      throw new Error("Datatabase Repository has Staged Changes, cannot proceed.")
+    }
+
+    if (!repo.getHeadCommit()) {
+      throw new Error("Database Repository has not been initialized, cannot proceed.");
+    }
 
     const author = await Signature.default(repo);
     const committer = await Signature.default(repo);
 
-    let id = await repo.createCommit("HEAD", author, committer, message, oid, [parent]);
+    let id = await repo.createCommitOnHead([], author, committer, message);
     let commit = await repo.getCommit(id);
 
     return await formatRedirectCommit(repo, commit)
