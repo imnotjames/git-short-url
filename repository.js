@@ -151,7 +151,7 @@ class Repository {
     }
 
     if (from) {
-      let range = `${from}^..${range}`;
+      let range = `${from}^..${until}`;
       walker.pushRange(range);
     } else {
       walker.push(until);
