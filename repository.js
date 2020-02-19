@@ -2,7 +2,17 @@ const child_process = require('child_process');
 const util = require('util');
 
 const matter = require('gray-matter');
-const { Commit, Oid, Diff: NodeGitDiff, Tree: NodeGitTree, Repository: NodeRepository, Reference, Revwalk, Signature, Error: NodeGitError } = require('nodegit');
+const {
+    Commit,
+    Oid,
+    Diff,
+    Merge,
+    Repository: NodeGitRepository,
+    Cred,
+    Revwalk,
+    Signature,
+    Error: NodeGitError
+} = require('nodegit');
 const path = require('path');
 const { URL, parse } = require('url');
 const YAML = require('yaml');
@@ -29,7 +39,7 @@ async function hasStagedChanges(repo, index) {
 
   let headTree = await head.getTree();
 
-  const diff = await NodeGitDiff.treeToIndex(repo, headTree, index);
+  const diff = await Diff.treeToIndex(repo, headTree, index);
 
   const patches = await diff.patches();
 
@@ -124,8 +134,8 @@ async function formatRedirectCommit(repo, commit) {
 class Repository {
   async _getRepository() {
     if (!this._repo) {
-      const repoPath = await NodeRepository.discover(path.resolve(this.path), 0, null);
-      this._repo = await NodeRepository.open(repoPath);
+      const repoPath = await NodeGitRepository.discover(path.resolve(this.path), 0, null);
+      this._repo = await NodeGitRepository.open(repoPath);
     }
 
     return this._repo;
@@ -134,6 +144,7 @@ class Repository {
   constructor(repoPath, { branch = 'master', upstream = 'origin' }) {
     this.path = repoPath;
     this.branch = branch;
+    this.upstream = upstream;
   }
 
   async get(id) {
@@ -198,7 +209,7 @@ class Repository {
     }
   }
 
-  async create({ url, description, ...extra }) {
+  async create({ url, description, shouldCommit = true, ...extra }) {
     if (!isValidURL(url)) {
       throw new Error('A Valid URL is required.');
     }
@@ -232,13 +243,53 @@ class Repository {
       throw new Error("Database Repository has not been initialized, cannot proceed.");
     }
 
+    await repo.stateCleanup();
+    if (repo.state() !== NodeGitRepository.STATE.NONE) {
+      throw new Error("Database Repository is in an invalid state.")
+    }
+
     const author = await Signature.default(repo);
     const committer = await Signature.default(repo);
 
     let id = await repo.createCommitOnHead([], author, committer, message);
     let commit = await repo.getCommit(id);
 
+    if (shouldCommit) {
+      await this.commit();
+    }
+
     return await formatRedirectCommit(repo, commit)
+  }
+
+  async commit() {
+    const repo = await this._getRepository();
+
+    let remote = await repo.getRemote(this.upstream);
+
+    const callbacks = {
+      callbacks: {
+        credentials: function(url, userName) {
+          return Cred.sshKeyFromAgent(userName);
+        }
+      }
+    };
+
+    try {
+      await remote.push([`refs/heads/${this.branch}:refs/heads/${this.branch}`], callbacks);
+    } catch (e) {
+      if (e.errno !== NodeGitError.CODE.ENONFASTFORWARD) {
+        throw e;
+      }
+
+      await remote.fetch([`remotes/${this.upstream}/${this.branch}:refs/head/${this.branch}`], callbacks);
+
+      await repo.mergeBranches(
+          this.branch,
+          `refs/remotes/${this.upstream}/${this.branch}`
+      );
+
+      await remote.push([`refs/heads/${this.branch}:refs/heads/${this.branch}`], callbacks)
+    }
   }
 }
 
