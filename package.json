@@ -19,5 +19,12 @@
   },
   "bin": {
     "short": "./cli.js"
-  }
+  },
+  "files": [
+    "/index.js",
+    "/cli.js",
+    "/publish.js",
+    "/repository.js",
+    "/templates"
+  ]
 }
