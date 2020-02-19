@@ -106,32 +106,33 @@ async function getShortId(repo, commit, { hashLength = MINIMUM_HASH} = {}) {
   }
 }
 
-async function formatRedirectCommit(repo, commit) {
-  let { content: description, data, isEmpty } = matter(commit.message().trim());
-
-  if (!isValidURL(data.url)) {
-    throw new Error('Commit is not a Redirect');
-  }
-
-  let id = await getShortId(repo, commit, { hashLength: 40 });
-
-  let shortId = await getShortId(repo, commit);
-
-  let offset = commit.author().when().offset() * 60;
-  let created = new Date((commit.author().when().time() + offset) * 1000);
-  let creator = commit.author().name();
-
-  return {
-    id,
-    shortId,
-    description,
-    created,
-    creator,
-    ...data
-  }
-}
-
 class Repository {
+  async _getShortUrl(shortId) {
+    if (this.baseUrl) {
+      return path.join(this.baseUrl, shortId);
+    }
+
+    let repo = await this._getRepository();
+
+    let upstream = await repo.getRemote(this.upstream);
+
+    if (upstream) {
+      let upstreamUrl = upstream.url();
+
+      let match = upstreamUrl.match(/(git@)?github.com:(?<username>[^/]+)\/(?<repo>[^/]+).git$/i)
+        || upstreamUrl.match(/^https?:\/\/github.com\/(?<username>[^/]+)\/(?<repo>[^/]+).git$/i);
+
+      if (match) {
+        let username = match.groups['username'];
+        let repo = match.groups['repo'];
+
+        return path.join(`https://${username}.github.io/${repo}`, shortId);
+      }
+    }
+
+    return null;
+  }
+
   async _getRepository() {
     if (!this._repo) {
       const repoPath = await NodeGitRepository.discover(path.resolve(this.path), 0, null);
@@ -141,10 +142,41 @@ class Repository {
     return this._repo;
   }
 
-  constructor(repoPath, { branch = 'master', upstream = 'origin' }) {
+  async _formatRedirectCommit(commit) {
+    let repo = await this._getRepository();
+
+    let { content: description, data, isEmpty } = matter(commit.message().trim());
+
+    if (!isValidURL(data.url)) {
+      throw new Error('Commit is not a Redirect');
+    }
+
+    let id = await getShortId(repo, commit, { hashLength: 40 });
+
+    let shortId = await getShortId(repo, commit);
+
+    let offset = commit.author().when().offset() * 60;
+    let created = new Date((commit.author().when().time() + offset) * 1000);
+    let creator = commit.author().name();
+
+    let shortUrl = await this._getShortUrl(shortId);
+
+    return {
+      id,
+      shortId,
+      shortUrl,
+      description,
+      created,
+      creator,
+      ...data
+    }
+  }
+
+  constructor(repoPath, { branch = 'master', upstream = 'origin', baseUrl }) {
     this.path = repoPath;
     this.branch = branch;
     this.upstream = upstream;
+    this.baseUrl = baseUrl;
   }
 
   async get(id) {
@@ -162,7 +194,7 @@ class Repository {
       throw new Error('Commit Not Found');
     }
 
-    return await formatRedirectCommit(repo, commit);
+    return await this._formatRedirectCommit(commit);
   }
 
   async* all({ from, until } = {}) {
@@ -202,7 +234,7 @@ class Repository {
       try {
         let commit = await repo.getCommit(id);
 
-        yield await formatRedirectCommit(repo, commit);
+        yield await this._formatRedirectCommit(commit);
       } catch {
         // Do nothing
       }
@@ -258,7 +290,7 @@ class Repository {
       await this.commit();
     }
 
-    return await formatRedirectCommit(repo, commit)
+    return await this._formatRedirectCommit(commit)
   }
 
   async commit() {

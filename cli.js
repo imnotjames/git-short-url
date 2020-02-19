@@ -15,14 +15,16 @@ const config = new ConfigStore(pkg.name, {},{ globalConfigPath: true });
 const CONFIG_REPOSITORY_PATH = 'repository.path';
 const CONFIG_REPOSITORY_BRANCH = 'repository.branch';
 const CONFIG_REPOSITORY_UPSTREAM = 'repository.upstream';
+const CONFIG_REDIRECT_BASEURL = 'redirect.base-url';
 
 
 function repositoryFromConfig() {
   const repoPath = config.get(CONFIG_REPOSITORY_PATH) || '.';
   const branch = config.get(CONFIG_REPOSITORY_BRANCH) || 'master';
   const upstream = config.get(CONFIG_REPOSITORY_UPSTREAM) || 'origin';
+  const baseUrl = config.get(CONFIG_REDIRECT_BASEURL);
 
-  return new Repository(repoPath, { branch, upstream });
+  return new Repository(repoPath, { branch, upstream , baseUrl});
 }
 
 function catchErrors(command, ...args) {
