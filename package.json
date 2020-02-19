@@ -10,6 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "base-58": "0.0.1",
+    "chalk": "^3.0.0",
     "commander": "^4.1.1",
     "configstore": "^5.0.1",
     "gray-matter": "^4.0.2",
