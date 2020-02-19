@@ -3,21 +3,36 @@ name: Publish Short URLs
 on:
   push:
     branches:
-      - master
+      - {{ config.repository.branch }}
 
 jobs:
   release:
+    env:
+      GIT_SHORT_URL_VERSION: "0.0.3"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
+
+      - name: Fetch Branches
+        run: git fetch --no-tags --prune --unshallow origin +refs/heads/{{ config.repository.branch }}:refs/remotes/origin/{{ config.repository.branch }}
+
       - uses: actions/setup-node@v1
         with:
-          node-version: '13.x'
-      - run: npm install -g git-short-url
-      - run: short publish --from {{{{raw}}}}"${GITHUB_SHA}"{{{{/raw}}}} --output-dir ./public/
+          node-version: '12.x'
+
+      - name: Install `git-short-url`
+        run: npm install -g "git-short-url@^${GIT_SHORT_URL_VERSION}"
+
+      - name: Publish Short URLs
+        run: npx short publish --until "${GITHUB_SHA}" --output-dir ./public/
+
+      - name: Write Version
+        run: mkdir -p ./public/ && echo "${GITHUB_SHA}" > ./public/version
+
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           deploy_key: {{{{raw}}}}${{ secrets.ACTIONS_DEPLOY_KEY }}{{{{/raw}}}}
           publish_dir: ./public
+          keep_files: true
