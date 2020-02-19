@@ -12,9 +12,9 @@ const pkg = require('./package.json');
 const program = new Commander.Command();
 const config = new ConfigStore(pkg.name, {},{ globalConfigPath: true });
 
-const CONFIG_REPOSITORY_PATH = 'repository';
-const CONFIG_REPOSITORY_BRANCH = 'branch';
-const CONFIG_REPOSITORY_UPSTREAM = 'upstream';
+const CONFIG_REPOSITORY_PATH = 'repository.path';
+const CONFIG_REPOSITORY_BRANCH = 'repository.branch';
+const CONFIG_REPOSITORY_UPSTREAM = 'repository.upstream';
 
 
 function repositoryFromConfig() {
