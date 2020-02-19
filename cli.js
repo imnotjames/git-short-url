@@ -68,7 +68,7 @@ program
 program
     .command('publish')
     .description('')
-    .option('--output-dir', 'Where to store the indexed items', '.')
+    .option('--output-dir <directory>', 'Where to store the indexed items', '.')
     .option('--from <ref>', 'Index only since this ref')
     .option('--until <ref>', 'Index only until this ref')
     .action(async ({outputDir, from, until}) => {
